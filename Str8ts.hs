@@ -18,6 +18,16 @@ str8ts = [-10,-10,0,0,5,0,0,-3,-10,
           0,0,1,-10,-10,0,0,0,0,
           -10,-10,8,0,0,0,0,-10,-2] 
 
+test =  [-10,-10,  9,  6,   5,   8,   7,  -3,  -10,  
+          8,  6,   5,  7,  -10, -10,  1,   2,   3,  
+          7,  5,   6, -10, -8,   2,   3,   1,   4,  
+          9,  8,   7, -4,   3,   1,   2,  -10, -5,  
+        -10,  7,   4,  1,   2,   3,   6,   5,  -10,  
+        -10, -10,  2,  3,   1,  -9,   5,   4,   6,  
+          4,  1,   3,  2,  -10, -10,  8,   6,   7,  
+          2,  3,   1, -10, -10,  0,   9,   7,   8,  
+        -10, -10,  0,  0,   0,   0,   0,  -10, -2 ]              
+
 --Recebe um par ordenado e retorna o valor de x
 getX :: Tuple -> Int
 getX (x, _) = x 
@@ -47,10 +57,10 @@ indexAt board value i | board!!i == value = 0
                       | otherwise = 1 + indexAt board value (i+1)   
 
 --Modifica um valor da matriz em um índice especificado
-boardSet :: [Int] -> [Int] -> Tuple -> Int -> Int -> [Int]
-boardSet _ _ _ _ 81 = []
-boardSet board (x:xs) t value i |i == (index t) = value : boardSet board xs t value (i+1)
-                                |otherwise = x : boardSet board xs t value (i+1)
+boardSet :: [Int] -> Tuple -> Int -> Int -> [Int]
+boardSet _ _ _ 81 = []
+boardSet (x:xs) t value i |i == (index t) = value : boardSet xs t value (i+1)
+                                |otherwise = x : boardSet xs t value (i+1)
 
 --Retorna a primeira Tupla de coordenada cujo valor armazenado é 0, caso não haja retorna (-1,-1)
 findEmpty :: [Int] -> [Int] -> Tuple
@@ -60,7 +70,7 @@ findEmpty board (x: xs) |(x == 0) = coordinate (indexAt board x 0)
 
 --Chamas funções auxiliares para determinar se a inserção de um valor em uma coordenada é válida
 isValid :: [Int] -> Tuple -> Int -> Bool
-isValid board t value = (rowValid board t value) && (colValid board t value) && (str8Valid board t value)
+isValid board t value = (rowValid board t value) && (colValid board t value) && (str8Valid (boardSet board t value 0) t value)
 
 --Retorna se um valor pertence ou não a uma lista
 checkList :: [Int] -> Int -> Bool
@@ -107,16 +117,24 @@ getUpper vector t i cond  |(vector!!i < 0) = []
                           |(i == cond) = (getUpper vector t (i+1) cond)
                           |otherwise = (vector!!i : (getUpper vector t (i+1) cond))
 
+--Algoritmo auxiliar ao quicksort
+part :: Int -> [Int] -> [Int] -> [Int] -> ([Int],[Int])
+part x [] ps gs = (ps, gs)
+part x (y:xs) ps gs | y < x = part x xs (y: ps) gs
+                    | otherwise = part x xs ps (y: gs)                    
+
 --Algoritmo simples de ordenamento de lista, serve para posteriormente verificar se as sublistas straight formam uma progressão aritimética de ordem 1
 quicksort :: [Int] -> [Int]
 quicksort [] = []
-quicksort (x:xs) = [y | y <- xs, y <= x] ++ (x : [y | y <- xs, y > x])
+quicksort (x: xs) = (quicksort ps) ++ (x: (quicksort gs))
+  where (ps, gs) = part x xs [] []
 
 --Verifica se uma lista é uma progressão aritimética de ordem 1, ou seja a condição das sequências (straights)
 checkSequence :: [Int] -> Bool
 checkSequence [] = True
+checkSequence [a] = True
 checkSequence (a: (b: c))  |a + 1 /= b = False
-                           | otherwise = checkSequence (b: c)  
+                           | otherwise = checkSequence (b: c)
 
 --Função principal que consegue a sub-linha e sub-coluna de straight para um ponto (x, y) e retorna se a insersção de um valor de entrada é legítima 
 str8Valid :: [Int] -> Tuple -> Int -> Bool
@@ -124,7 +142,7 @@ str8Valid board t value = (sValid (getStrRow board t) t value) && (sValid (getSt
 
 --Função auxiliar que apenas checa a validade do straight quando não há mais nenhum 0 naquele straight, ou seja todos os números já foram inseridos naquela sequência
 sValid :: [Int] -> Tuple -> Int -> Bool
-sValid board t value | (checkList (boardSet board board t value 0) 0) = True
+sValid board t value | (checkList board 0) = True
                      | otherwise = checkSequence (quicksort(board))
 
 --Função auxiliar da função resolver que contém o algorítimo recursivo
@@ -132,7 +150,7 @@ sValid board t value | (checkList (boardSet board board t value 0) 0) = True
 --Verifica se a inserção é válida e em caso positivo, altera a matriz e chama a função solve
 backtrack :: [Int] -> Int -> Tuple -> [Int]
 backtrack board 10 t = board
-backtrack board value t | (isValid board t value) && (getX (findEmpty (solve (boardSet (board) (board) t value 0)) (solve (boardSet (board) (board) t value 0))) == -1 ) = (solve (boardSet (board) (board) t value 0))
+backtrack board value t | (isValid board t value) && (getX (findEmpty (solve (boardSet (board) t value 0)) (solve (boardSet (board) t value 0))) == -1 ) = (solve (boardSet (board) t value 0))
                         | otherwise = backtrack board (value+1) t
 --Esta função dada uma matriz incompleta, resolve-a
 --Caso não hajam mais espaços vazios (indicado por findEmpty) retorna o próprio argumento
@@ -143,4 +161,4 @@ solve board |(getX (findEmpty board board)== -1) = board
 
 
 main = do
-   print (solve str8ts)
+   print (solve test)
